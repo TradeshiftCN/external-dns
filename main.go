@@ -92,6 +92,8 @@ func main() {
 
 	var p provider.Provider
 	switch cfg.Provider {
+	case "ali":
+		p, err = provider.NewAliProvider(domainFilter, cfg.DryRun)
 	case "aws":
 		p, err = provider.NewAWSProvider(domainFilter, zoneTypeFilter, cfg.DryRun)
 	case "azure":
