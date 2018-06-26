@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/aliyun/alibaba-cloud-sdk-go/sdk/requests"
 	"github.com/aliyun/alibaba-cloud-sdk-go/services/alidns"
 	"github.com/kubernetes-incubator/external-dns/endpoint"
 	"github.com/kubernetes-incubator/external-dns/plan"
@@ -16,6 +17,7 @@ const (
 	aliAccessKeySecret = "ALICLOUD_ACCESS_KEY_SECRET"
 	region = "cn-beijing"
 	recordIdKey = "RecordId"
+	defaultAlidnsRecordTTL = 600
 )
 
 type AliAPI interface {
@@ -194,15 +196,17 @@ func (p *AliProvider) deleteRecords(deleted aliChangeMap) {
 	for domain, endpoints := range deleted {
 		for _, endpoint := range endpoints {
 			if p.dryRun {
-				log.Infof("Would delete %s record named '%s' for Ali DNS domain '%s'.",
+				log.Infof("Would delete %s record named '%s' value '%s' for Ali DNS domain '%s'.",
 					endpoint.RecordType,
 					endpoint.DNSName,
+					endpoint.Target,
 					domain,
 				)
 			} else {
-				log.Infof("Deleting %s record named '%s' for Ali DNS domain '%s'.",
+				log.Infof("Deleting %s record named '%s' value '%s' for Ali DNS domain '%s'.",
 					endpoint.RecordType,
 					endpoint.DNSName,
+					endpoint.Target,
 					domain,
 				)
 				recordId := p.findRecord(*endpoint)
@@ -210,6 +214,7 @@ func (p *AliProvider) deleteRecords(deleted aliChangeMap) {
 					log.Errorf("Failed to find %s record named '%s' for Ali DNS domain '%s'.",
 						endpoint.RecordType,
 						endpoint.DNSName,
+						endpoint.Target,
 						domain,
 					)
 					continue
@@ -220,9 +225,11 @@ func (p *AliProvider) deleteRecords(deleted aliChangeMap) {
 
 				_, err := p.client.DeleteDomainRecord(request)
 				if err != nil {
-					log.Errorf("Failed to delete %s record named '%s' for Ali DNS domain '%s': %v",
+					log.Errorf("Failed to delete %s record named '%s' value '%s' recordId '%s' for Ali DNS domain '%s': %v",
 						endpoint.RecordType,
 						endpoint.DNSName,
+						endpoint.Target,
+						recordId,
 						domain,
 						err,
 					)
@@ -236,17 +243,19 @@ func (p *AliProvider) createRecords(created aliChangeMap) {
 	for domain, endpoints := range created {
 		for _, endpoint := range endpoints {
 			if p.dryRun {
-				log.Infof("Would create %s record named '%s' for Ali DNS domain '%s'.",
+				log.Infof("Would create %s record named '%s' value '%s' for Ali DNS domain '%s'.",
 					endpoint.RecordType,
 					endpoint.DNSName,
+					endpoint.Target,
 					domain,
 				)
 				continue
 			}
 
-			log.Infof("Creating %s record named '%s' for Ali DNS domain '%s'.",
+			log.Infof("Creating %s record named '%s' value '%s' for Ali DNS domain '%s'.",
 				endpoint.RecordType,
 				endpoint.DNSName,
+				endpoint.Target,
 				domain,
 			)
 
@@ -254,15 +263,19 @@ func (p *AliProvider) createRecords(created aliChangeMap) {
 			request.SetDomain(domain)
 			request.RR = endpoint.DNSName
 			request.Type = endpoint.RecordType
-			if endpoint.RecordTTL != 0 {
-				request.Value = endpoint.Target
+			request.Value = endpoint.Target
+			if endpoint.RecordTTL.IsConfigured() {
+				request.TTL = requests.NewInteger(int(endpoint.RecordTTL))
+			} else {
+				request.TTL = requests.NewInteger(defaultAlidnsRecordTTL)
 			}
 
 			_, err := p.client.AddDomainRecord(request)
 			if err != nil {
-				log.Errorf("Failed to create %s record named '%s' for Ali DNS domain '%s': %v",
+				log.Errorf("Failed to create %s record named '%s' value '%s' for Ali DNS domain '%s': %v",
 					endpoint.RecordType,
 					endpoint.DNSName,
+					endpoint.Target,
 					domain,
 					err,
 				)
