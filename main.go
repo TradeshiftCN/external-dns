@@ -42,6 +42,7 @@ func main() {
 	if err := cfg.ParseFlags(os.Args[1:]); err != nil {
 		log.Fatalf("flag parsing error: %v", err)
 	}
+	// todo: add sencond parse checking when use ali
 	log.Infof("config: %+v", cfg)
 
 	if err := validation.ValidateConfig(cfg); err != nil {
