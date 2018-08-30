@@ -141,7 +141,7 @@ func (p *AliProvider) mapChanges(domains []alidns.Domain, changes *plan.Changes)
 	mapChange := func(changeMap aliChangeMap, change *endpoint.Endpoint) {
 		domain, _ := zoneNameIDMapper.FindZone(change.DNSName)
 		if domain == "" {
-			log.Infof("Ignoring changes to '%s' because a suitable Azure DNS domain was not found.", change.DNSName)
+			log.Infof("Ignoring changes to '%s' because a suitable Ali DNS domain was not found.", change.DNSName)
 			return
 		}
 
