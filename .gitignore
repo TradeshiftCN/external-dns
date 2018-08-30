@@ -44,5 +44,5 @@ cover.out
 *.coverprofile
 external-dns
 
-# vendor dir
-vendor/
+## vendor dir
+#vendor/
