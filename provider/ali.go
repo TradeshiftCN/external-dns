@@ -90,7 +90,7 @@ func (p *AliProvider) Records() (endpoints []*endpoint.Endpoint, _ error) {
 
 	for _, domain := range domains {
 		request := alidns.CreateDescribeDomainRecordsRequest()
-		request.SetDomain(domain.DomainName)
+		request.DomainName = domain.DomainName
 
 		response, err := p.client.DescribeDomainRecords(request)
 		if err != nil {
