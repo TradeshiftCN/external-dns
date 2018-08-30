@@ -17,13 +17,14 @@ FROM golang:1.8 as builder
 
 WORKDIR /go/src/github.com/kubernetes-incubator/external-dns
 COPY . .
-RUN make test
+#RUN make test
 RUN make build
 
 # final image
 FROM registry.opensource.zalan.do/stups/alpine:latest
 MAINTAINER Team Teapot @ Zalando SE <team-teapot@zalando.de>
-
+ENV ALICLOUD_ACCESS_KEY_SECRET="d6kpGV1GBmRZNbrhGoxIaJu1V7fPBa" 
+ENV ALICLOUD_ACCESS_KEY_ID="LTAIecd1he3mmO0h" 
 COPY --from=builder /go/src/github.com/kubernetes-incubator/external-dns/build/external-dns /bin/external-dns
 
 ENTRYPOINT ["/bin/external-dns"]
