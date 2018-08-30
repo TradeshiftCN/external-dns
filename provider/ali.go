@@ -39,9 +39,9 @@ type AliProvider struct {
 
 // NewAliProvider initializes a new Alidns based Provider.
 func NewAliProvider(domainFilter DomainFilter, dryRun bool) (*AliProvider, error) {
-	accessKeyID := os.Getenv(aliAccessKeyId)
-	if len(accessKeyId) == 0 {
-		return nil, fmt.Errorf("%s is not set", aliAccessKeyId)
+	accessKeyID := os.Getenv(aliAccessKeyID)
+	if len(accessKeyID) == 0 {
+		return nil, fmt.Errorf("%s is not set", aliAccessKeyID)
 	}
 
 	accessKeySecret := os.Getenv(aliAccessKeySecret)
@@ -49,7 +49,7 @@ func NewAliProvider(domainFilter DomainFilter, dryRun bool) (*AliProvider, error
 		return nil, fmt.Errorf("%s is not set", aliAccessKeySecret)
 	}
 
-	client, err := alidns.NewClientWithAccessKey(region, accessKeyId, accessKeySecret)
+	client, err := alidns.NewClientWithAccessKey(region, accessKeyID, accessKeySecret)
 	if err != nil {
 		return nil, err
 	}
@@ -100,9 +100,9 @@ func (p *AliProvider) Records() (endpoints []*endpoint.Endpoint, _ error) {
 		for _, record := range response.DomainRecords.Record {
 			ep := endpoint.NewEndpointWithTTL(record.RR, record.Value, record.Type, endpoint.TTL(record.TTL))
 			recordID := map[string]string{
-				recordIdKey: record.RecordId,
+				recordIDKey: record.RecordId,
 			}
-			ep.MergeLabels(recordId)
+			ep.MergeLabels(recordID)
 
 			endpoints = append(endpoints, ep)
 		}
@@ -186,7 +186,7 @@ func (p *AliProvider) findRecord(record endpoint.Endpoint) (recordID string) {
 
 	for _, r := range records {
 		if recordEquals(*r, record) {
-			recordID = r.Labels[recordIdKey]
+			recordID = r.Labels[recordIDKey]
 			return recordID
 		}
 	}
@@ -212,7 +212,7 @@ func (p *AliProvider) deleteRecords(deleted aliChangeMap) {
 					domain,
 				)
 				recordID := p.findRecord(*endpoint)
-				if recordId == "" {
+				if recordID == "" {
 					log.Errorf("Failed to find %s record named '%s' for Ali DNS domain '%s'.",
 						endpoint.RecordType,
 						endpoint.DNSName,
@@ -223,7 +223,7 @@ func (p *AliProvider) deleteRecords(deleted aliChangeMap) {
 				}
 
 				request := alidns.CreateDeleteDomainRecordRequest()
-				request.RegionId = recordId
+				request.RegionId = recordID
 
 				_, err := p.client.DeleteDomainRecord(request)
 				if err != nil {
@@ -231,7 +231,7 @@ func (p *AliProvider) deleteRecords(deleted aliChangeMap) {
 						endpoint.RecordType,
 						endpoint.DNSName,
 						endpoint.Target,
-						recordId,
+						recordID,
 						domain,
 						err,
 					)
