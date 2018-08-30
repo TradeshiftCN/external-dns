@@ -90,7 +90,7 @@ func (p *AliProvider) Records() (endpoints []*endpoint.Endpoint, _ error) {
 
 	for _, domain := range domains {
 		request := alidns.CreateDescribeDomainRecordsRequest()
-		request.SetDomain(domain.DomainName)
+		request.DomainName = domain.DomainName
 
 		response, err := p.client.DescribeDomainRecords(request)
 		if err != nil {
@@ -262,7 +262,7 @@ func (p *AliProvider) createRecords(created aliChangeMap) {
 			)
 
 			request := alidns.CreateAddDomainRecordRequest()
-			request.SetDomain(domain)
+			request.DomainName = domain
 			request.RR = endpoint.DNSName
 			request.Type = endpoint.RecordType
 			request.Value = endpoint.Target
