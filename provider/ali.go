@@ -13,13 +13,14 @@ import (
 )
 
 const (
-	aliAccessKeyId = "ALICLOUD_ACCESS_KEY_ID"
-	aliAccessKeySecret = "ALICLOUD_ACCESS_KEY_SECRET"
-	region = "cn-beijing"
-	recordIdKey = "RecordId"
+	aliAccessKeyID         = "ALICLOUD_ACCESS_KEY_ID"
+	aliAccessKeySecret     = "ALICLOUD_ACCESS_KEY_SECRET"
+	region                 = "cn-beijing"
+	recordIDKey            = "RecordId"
 	defaultAlidnsRecordTTL = 600
 )
 
+// AliAPI is alibaba cloud dns service
 type AliAPI interface {
 	AddDomainRecord(request *alidns.AddDomainRecordRequest) (response *alidns.AddDomainRecordResponse, err error)
 	DeleteDomainRecord(request *alidns.DeleteDomainRecordRequest) (response *alidns.DeleteDomainRecordResponse, err error)
@@ -28,6 +29,7 @@ type AliAPI interface {
 	UpdateDomainRecord(request *alidns.UpdateDomainRecordRequest) (response *alidns.UpdateDomainRecordResponse, err error)
 }
 
+// AliProvider is an implementation of Provider for AWS Route53
 type AliProvider struct {
 	client AliAPI
 	dryRun bool
@@ -37,7 +39,7 @@ type AliProvider struct {
 
 // NewAliProvider initializes a new Alidns based Provider.
 func NewAliProvider(domainFilter DomainFilter, dryRun bool) (*AliProvider, error) {
-	accessKeyId := os.Getenv(aliAccessKeyId)
+	accessKeyID := os.Getenv(aliAccessKeyId)
 	if len(accessKeyId) == 0 {
 		return nil, fmt.Errorf("%s is not set", aliAccessKeyId)
 	}
@@ -53,9 +55,9 @@ func NewAliProvider(domainFilter DomainFilter, dryRun bool) (*AliProvider, error
 	}
 
 	provider := &AliProvider{
-		client:         client,
-		domainFilter:   domainFilter,
-		dryRun:         dryRun,
+		client:       client,
+		domainFilter: domainFilter,
+		dryRun:       dryRun,
 	}
 
 	return provider, nil
@@ -97,7 +99,7 @@ func (p *AliProvider) Records() (endpoints []*endpoint.Endpoint, _ error) {
 
 		for _, record := range response.DomainRecords.Record {
 			ep := endpoint.NewEndpointWithTTL(record.RR, record.Value, record.Type, endpoint.TTL(record.TTL))
-			recordId := map[string]string {
+			recordID := map[string]string{
 				recordIdKey: record.RecordId,
 			}
 			ep.MergeLabels(recordId)
@@ -162,7 +164,7 @@ func (p *AliProvider) mapChanges(domains []alidns.Domain, changes *plan.Changes)
 	return deleted, created
 }
 
-func (p *AliProvider) findRecord(record endpoint.Endpoint) (recordId string) {
+func (p *AliProvider) findRecord(record endpoint.Endpoint) (recordID string) {
 	records, err := p.Records()
 	if err != nil {
 		log.Error(err)
@@ -184,8 +186,8 @@ func (p *AliProvider) findRecord(record endpoint.Endpoint) (recordId string) {
 
 	for _, r := range records {
 		if recordEquals(*r, record) {
-			recordId = r.Labels[recordIdKey]
-			return recordId
+			recordID = r.Labels[recordIdKey]
+			return recordID
 		}
 	}
 
@@ -209,7 +211,7 @@ func (p *AliProvider) deleteRecords(deleted aliChangeMap) {
 					endpoint.Target,
 					domain,
 				)
-				recordId := p.findRecord(*endpoint)
+				recordID := p.findRecord(*endpoint)
 				if recordId == "" {
 					log.Errorf("Failed to find %s record named '%s' for Ali DNS domain '%s'.",
 						endpoint.RecordType,
