@@ -10,6 +10,7 @@ import (
 	"github.com/kubernetes-incubator/external-dns/plan"
 
 	log "github.com/sirupsen/logrus"
+	"strings"
 )
 
 const (
@@ -29,7 +30,7 @@ type AliAPI interface {
 	UpdateDomainRecord(request *alidns.UpdateDomainRecordRequest) (response *alidns.UpdateDomainRecordResponse, err error)
 }
 
-// AliProvider is an implementation of Provider for AWS Route53
+// AliProvider is an implementation of Provider for Ali DNS
 type AliProvider struct {
 	client AliAPI
 	dryRun bool
@@ -98,7 +99,7 @@ func (p *AliProvider) Records() (endpoints []*endpoint.Endpoint, _ error) {
 		}
 
 		for _, record := range response.DomainRecords.Record {
-			ep := endpoint.NewEndpointWithTTL(record.RR, record.Value, record.Type, endpoint.TTL(record.TTL))
+			ep := endpoint.NewEndpointWithTTL(record.RR + "." + domain.DomainName, record.Value, record.Type, endpoint.TTL(record.TTL))
 			recordID := map[string]string{
 				recordIDKey: record.RecordId,
 			}
@@ -223,7 +224,7 @@ func (p *AliProvider) deleteRecords(deleted aliChangeMap) {
 				}
 
 				request := alidns.CreateDeleteDomainRecordRequest()
-				request.RegionId = recordID
+				request.RecordId = recordID
 
 				_, err := p.client.DeleteDomainRecord(request)
 				if err != nil {
@@ -263,7 +264,7 @@ func (p *AliProvider) createRecords(created aliChangeMap) {
 
 			request := alidns.CreateAddDomainRecordRequest()
 			request.DomainName = domain
-			request.RR = endpoint.DNSName
+			request.RR = strings.TrimSuffix(endpoint.DNSName, "." + domain)
 			request.Type = endpoint.RecordType
 			request.Value = endpoint.Target
 			if endpoint.RecordTTL.IsConfigured() {
