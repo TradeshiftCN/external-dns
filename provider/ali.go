@@ -99,7 +99,13 @@ func (p *AliProvider) Records() (endpoints []*endpoint.Endpoint, _ error) {
 		}
 
 		for _, record := range response.DomainRecords.Record {
-			ep := endpoint.NewEndpointWithTTL(record.RR + "." + domain.DomainName, record.Value, record.Type, endpoint.TTL(record.TTL))
+			target := record.Value
+			// Add double quotation marks for TXT record target as the regex needs it to match the owner id
+			if record.Type == endpoint.RecordTypeTXT {
+				target = fmt.Sprintf("\"%s\"", record.Value)
+			}
+
+			ep := endpoint.NewEndpointWithTTL(record.RR + "." + domain.DomainName, target, record.Type, endpoint.TTL(record.TTL))
 			recordID := map[string]string{
 				recordIDKey: record.RecordId,
 			}
