@@ -19,6 +19,7 @@ const (
 	region                 = "cn-beijing"
 	recordIDKey            = "RecordId"
 	defaultAlidnsRecordTTL = 600
+	defaultAlidnsPageSize  = 50
 )
 
 // AliAPI is alibaba cloud dns service
@@ -90,11 +91,29 @@ func (p *AliProvider) Records() (endpoints []*endpoint.Endpoint, _ error) {
 	}
 
 	for _, domain := range domains {
-		request := alidns.CreateDescribeDomainRecordsRequest()
-		request.DomainName = domain.DomainName
+		domainRecords, err := p.getDomainRecords(domain.DomainName)
+		if err != nil {
+			log.Errorf("Failed to get domain records for Ali DNS domain '%s': %v", domain.DomainName, err)
+			return nil, err
+		}
 
+		log.Infof("Found %d Ali DNS record(s) in domain '%s'.", len(domainRecords), domain.DomainName)
+		endpoints = append(endpoints, domainRecords...)
+	}
+
+	return endpoints, nil
+}
+
+func (p *AliProvider) getDomainRecords(domainName string) (endpoints []*endpoint.Endpoint, _ error) {
+	request := alidns.CreateDescribeDomainRecordsRequest()
+	request.DomainName = domainName
+	request.PageSize = requests.NewInteger(defaultAlidnsPageSize)
+	request.PageNumber = "1"
+
+	for {
 		response, err := p.client.DescribeDomainRecords(request)
 		if err != nil {
+			log.Errorf("Failed to describe domain records for Ali DNS domain '%s': %v", domainName, err)
 			return nil, err
 		}
 
@@ -105,7 +124,7 @@ func (p *AliProvider) Records() (endpoints []*endpoint.Endpoint, _ error) {
 				target = fmt.Sprintf("\"%s\"", record.Value)
 			}
 
-			ep := endpoint.NewEndpointWithTTL(record.RR + "." + domain.DomainName, target, record.Type, endpoint.TTL(record.TTL))
+			ep := endpoint.NewEndpointWithTTL(record.RR + "." + domainName, target, record.Type, endpoint.TTL(record.TTL))
 			recordID := map[string]string{
 				recordIDKey: record.RecordId,
 			}
@@ -113,9 +132,23 @@ func (p *AliProvider) Records() (endpoints []*endpoint.Endpoint, _ error) {
 
 			endpoints = append(endpoints, ep)
 		}
+
+		nextPage := getNextPageNumber(response.PageNumber, defaultAlidnsPageSize, response.TotalCount)
+		if nextPage == 0 {
+			break
+		} else {
+			request.PageNumber = requests.NewInteger(nextPage)
+		}
 	}
 
 	return endpoints, nil
+}
+
+func getNextPageNumber(pageNumber, pageSize, totalCount int) int {
+	if pageNumber*pageSize >= totalCount {
+		return 0
+	}
+	return pageNumber + 1
 }
 
 // ApplyChanges applies a given set of changes in a given domain.
